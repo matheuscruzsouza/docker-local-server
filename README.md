@@ -2,7 +2,7 @@
 
 ## HOW TO RUN
 
-### SETUP THE EXTERNAL NETWORK
+### SETUP THE EXTERNAL NETWORK IF NOT EXISTS ALREADY
 
 ```bash
 docker network create nginx-proxy
@@ -18,11 +18,4 @@ sudo sed -i "1i nameserver 127.0.0.1" /etc/resolv.conf
 
 ```bash
 docker-compose up
-```
-
-### AFTER START THE DOCKER COMPOSE RUN THIS CODES TO UPDATE THE NEXTCLOUD CONFIG FILE
-
-```bash
-docker cp ./nextcloud/config.php nextcloud-app:/var/www/html/config/config.php
-docker exec nextcloud-app chmod 777 /var/www/html/config/config.php
 ```
