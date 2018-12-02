@@ -1,0 +1,180 @@
+version: "3"
+
+services:
+  nginx-proxy:
+    build: proxy
+    container_name: docker-proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+
+  portainer:
+    image: portainer/portainer
+    container_name: portainer-app
+    restart: always
+    ports:
+      - "9000:9000"
+    command: -H unix:///var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    environment:
+      - VIRTUAL_HOST=dock.localserver.net
+
+  maria_db:
+    image: mariadb
+    container_name: nextcloud-db
+    restart: unless-stopped
+    volumes:
+      - maria_db:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=thenextcloud
+      - MYSQL_PASSWORD=thenextcloud
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+
+  nextcloud:
+    image: nextcloud
+    container_name: nextcloud-app
+    ports:
+      - 8080:80
+    links:
+      - maria_db
+    volumes:
+      - nextcloud:/var/www/html
+    restart: unless-stopped
+    environment:
+      - VIRTUAL_HOST=files.localserver.net
+      - MYSQL_HOST=maria_db:3306
+      - MYSQL_PASSWORD=thenextcloud
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - NEXTCLOUD_ADMIN_USER=admin
+      - NEXTCLOUD_ADMIN_PASSWORD=admin
+      - NEXTCLOUD_TRUSTED_DOMAINS=files.localserver.net
+    # AFTER START THE CONTAINER RUN THIS CODES TO UPDATE THE CONFIG FILE:
+    # docker cp ./nextcloud/config.php nextcloud-app:/var/www/html/config/config.php && \
+    # docker exec nextcloud-app chmod 777 /var/www/html/config/config.php 
+
+  rocketchat:
+    image: rocketchat/rocket.chat:latest
+    container_name: rocketchat-app
+    restart: unless-stopped
+    volumes:
+      - uploads:/app/uploads
+    environment:
+      - VIRTUAL_HOST=chat.localserver.net
+      - PORT=3000
+      - ROOT_URL=http://localhost:3000
+      - MONGO_URL=mongodb://mongo:27017/rocketchat
+      - MONGO_OPLOG_URL=mongodb://mongo:27017/local
+      - MAIL_URL=smtp://smtp.email
+    depends_on:
+      - mongo
+    ports:
+      - 3000:3000
+    labels:
+      - "traefik.backend=rocketchat"
+      - "traefik.frontend.rule=Host: your.domain.tld"
+
+  mongo:
+    image: mongo:3.2
+    container_name: rocketchat-db
+    restart: unless-stopped
+    volumes:
+     - data_db:/data/db
+    command: mongod --smallfiles --oplogSize 128 --replSet rs0 --storageEngine=mmapv1
+    labels:
+      - "traefik.enable=false"
+
+  mongo-init-replica:
+    image: mongo:3.2
+    container_name: rocketchat-db-replica
+    restart: unless-stopped
+    command: 'mongo mongo/rocketchat --eval "rs.initiate({ _id: ''rs0'', members: [ { _id: 0, host: ''localhost:27017'' } ]})"'
+    depends_on:
+      - mongo
+
+  wekandb:
+    image: mongo:3.2.21
+    container_name: wekan-db
+    restart: unless-stopped
+    command: mongod --smallfiles --oplogSize 128
+    networks:
+      - wekan-tier
+      - default
+    expose:
+      - 27017
+    volumes:
+      - wekan-db:/data/db
+      - wekan-db-dump:/dump
+
+  wekan:
+    image: quay.io/wekan/wekan
+    container_name: wekan-app
+    restart: unless-stopped
+    networks:
+      - wekan-tier
+      - default
+    ports:
+      - 5000:8080
+    environment:
+      - VIRTUAL_HOST=keep.localserver.net
+      - ROOT_URL=https://keep.localserver.net
+      - MONGO_URL=mongodb://wekandb:27017/wekan
+      - MAIL_URL=smtp://user:pass@mailserver.keep.localserver.net:25/
+      - MAIL_FROM='Example Wekan Support <support@keep.localserver.net>'
+      - WITH_API=true
+      - BROWSER_POLICY_ENABLED=true
+      - TRUSTED_URL=''
+      - WEBHOOKS_ATTRIBUTES=''
+      - OAUTH2_CLIENT_ID=''
+      - OAUTH2_SECRET=''
+      - OAUTH2_SERVER_URL=''
+      - OAUTH2_AUTH_ENDPOINT=''
+      - OAUTH2_USERINFO_ENDPOINT=''
+      - OAUTH2_TOKEN_ENDPOINT=''
+    depends_on:
+      - wekandb
+
+  dnsmasq:
+    build:
+      context: .
+      dockerfile: dns/Dockerfile
+    container_name: dnsmasq-app
+    cap_drop:
+      - NET_ADMIN
+    ports:
+      - 53:53/tcp
+      - 53:53/udp
+      - 5380:8080
+    environment:
+      - VIRTUAL_HOST=dns.localserver.net
+      - "HTTP_USER=admin"
+      - "HTTP_PASS=admin"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./dns/etc/dnsmasq.conf:/etc/dnsmasq.conf
+      - ./dns/etc/hosts.dnsmasq:/etc/hosts.dnsmasq
+
+volumes:
+  portainer_data:
+  data_db:
+  uploads:
+  nextcloud:
+  maria_db:
+  wekan-db:
+    driver: local
+  wekan-db-dump:
+    driver: local
+  
+networks:
+  default:
+    external:
+      name: nginx-proxy
+
+  wekan-tier:
+    driver: bridge
