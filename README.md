@@ -17,5 +17,5 @@ sudo sed -i "1i nameserver 127.0.0.1" /etc/resolv.conf
 ### START THE DOCKER COMPOSE
 
 ```bash
-docker-compose up
+docker-compose up --build
 ```
