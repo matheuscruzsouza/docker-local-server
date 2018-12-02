@@ -16,7 +16,7 @@ ENV HTTP_PASS=admin
 #configure dnsmasq
 RUN mkdir -p /etc/default/
 RUN echo -e "ENABLED=1\nIGNORE_RESOLVCONF=yes" > /etc/default/dnsmasq
-ADD ./dns/dnsmask.conf /etc/dnsmask.conf
-ADD ./dns/hosts.dnsmask /etc/hosts.dnsmask
+ADD dns/etc/dnsmasq.conf /etc/dnsmasq.conf
+ADD dns/etc/hosts.dnsmasq /etc/hosts.dnsmasq
 #run!
 ENTRYPOINT ["webproc","--config","/etc/dnsmasq.conf","--","dnsmasq","--no-daemon"]
