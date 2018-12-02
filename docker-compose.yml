@@ -54,10 +54,7 @@ services:
       - MYSQL_USER=nextcloud
       - NEXTCLOUD_ADMIN_USER=admin
       - NEXTCLOUD_ADMIN_PASSWORD=admin
-      - NEXTCLOUD_TRUSTED_DOMAINS=files.localserver.net
-    # AFTER START THE CONTAINER RUN THIS CODES TO UPDATE THE CONFIG FILE:
-    # docker cp ./nextcloud/config.php nextcloud-app:/var/www/html/config/config.php && \
-    # docker exec nextcloud-app chmod 777 /var/www/html/config/config.php 
+      - NEXTCLOUD_TRUSTED_DOMAINS=files.localserver.net 
 
   rocketchat:
     image: rocketchat/rocket.chat:latest
@@ -155,10 +152,6 @@ services:
       - VIRTUAL_HOST=dns.localserver.net
       - "HTTP_USER=admin"
       - "HTTP_PASS=admin"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./dns/etc/dnsmasq.conf:/etc/dnsmasq.conf
-      - ./dns/etc/hosts.dnsmasq:/etc/hosts.dnsmasq
 
 volumes:
   portainer_data:

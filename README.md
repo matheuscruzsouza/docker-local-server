@@ -1,16 +1,26 @@
+# DOCKER LOCAL SERVER
 
-### START INITIALIZING THE EXTERNAL NETWORK
+## HOW TO RUN
+
+### SETUP THE EXTERNAL NETWORK
+
 ```bash
 docker network create nginx-proxy
 ```
 
 ### ADD LOOPBACK TO NAMESERVERS
+
 ```bash
-echo "nameserver 127.0.0.1" | sudo tee -a /etc/resolv.conf
+sudo sed -i "1i nameserver 127.0.0.1" /etc/resolv.conf
 ```
 
+### START THE DOCKER COMPOSE
 
-### AFTER START THE CONTAINER RUN THIS CODES TO UPDATE THE NEXTCLOUD CONFIG FILE:
+```bash
+docker-compose up
+```
+
+### AFTER START THE DOCKER COMPOSE RUN THIS CODES TO UPDATE THE NEXTCLOUD CONFIG FILE
 
 ```bash
 docker cp ./nextcloud/config.php nextcloud-app:/var/www/html/config/config.php
